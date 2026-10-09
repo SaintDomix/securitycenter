@@ -1,5 +1,5 @@
 
-**Multi-Agent Network Intrusion Detection and Incident Investigation **
+**Multi-Agent Network Intrusion Detection and Incident Investigation**
 
 This project is an educational SOC-style prototype. A saved supervised model flags potentially malicious **network flows**, and five specialized programmatic agents hand off structured artifacts to form evidence-linked investigation candidates. The dashboard is for **investigating data**, not training on uploads.
 
