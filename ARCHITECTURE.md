@@ -1,4 +1,4 @@
-# CyberGuard-MAS: Architecture and Assignment 2 checklist
+# Architecture
 
 ## Value proposition
 The SOC analyst uploads **unlabeled new telemetry**; the platform returns an evidence-linked candidate incident queue and a JSON / HTML report. Offline model training is a developer-only preparation step, never part of the user workflow.
