@@ -1,10 +1,7 @@
-# CyberGuard-MAS
 
-**Multi-Agent Network Intrusion Detection and Incident Investigation — Assignment 2**
+**Multi-Agent Network Intrusion Detection and Incident Investigation **
 
-CyberGuard-MAS is an educational SOC-style prototype. A saved supervised model flags potentially malicious **network flows**, and five specialized programmatic agents hand off structured artifacts to form evidence-linked investigation candidates. The dashboard is for **investigating data**, not training on uploads.
-
-> **Scope:** Offline analysis of CSV network-flow records; not a production IDS, SIEM, or confirmation of host compromise. **No LLM API is used** in this release; agents are bounded software workers with tools, structured messages, and SQLite audit traces.
+This project is an educational SOC-style prototype. A saved supervised model flags potentially malicious **network flows**, and five specialized programmatic agents hand off structured artifacts to form evidence-linked investigation candidates. The dashboard is for **investigating data**, not training on uploads.
 
 ## Quick start (Windows / Linux / macOS)
 
@@ -68,11 +65,6 @@ python main.py --input data/SYNTHETIC_new_flows.csv --model models/demo_model.jo
 
 The run JSON appears under `reports/` (ignored by Git). Model Performance shows the saved holdout metrics of a locally trained model. Synthetic model outputs must never be presented as real UNSW benchmark results.
 
-## Research article and presentation
-
-- [`docs/CyberGuard_MAS_Assignment2_Article.docx`](docs/CyberGuard_MAS_Assignment2_Article.docx)
-- [`docs/ASSIGNMENT2_SUBMISSION.md`](docs/ASSIGNMENT2_SUBMISSION.md)
-- [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
 
 ## Limitations
 
@@ -83,4 +75,3 @@ The run JSON appears under `reports/` (ignored by Git). Model Performance shows 
 - Agent-based workflow ≠ autonomous LLM multi-agent platform.
 - Dataset shift may degrade results beyond UNSW-NB15.
 
-The work is separate from the author's dissertation.
