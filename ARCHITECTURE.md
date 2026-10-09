@@ -40,13 +40,3 @@ flowchart TD
 ## Meaningful multi-agent collaboration
 Each worker changes the shared investigation: validated source → scored flows → correlated candidates → prioritized cases → verified evidence. Correlation may elect **not** to create multi-flow incidents if entity identifiers are missing. Verification does not simply reproduce ML predictions, instead it checks underlying row references and evidence constraints.
 
-## Honest gaps before maximum rubric score
-- No true agent-autonomous planning or LLM-assisted analysis. This is a bounded, auditable agent-oriented ML system.
-- No retry policy or per-agent timeout yet.
-- Cross-format ingestion only when training and inference share exact feature schemas.
-- No guarantee of ≤40% across every scenario: the actual shares are calculated and shown.
-- Official dataset not bundled: verify on real benchmark externally before making empirical claims.
-- Source code is local; student should push the folder to their own Git repository.
-
-## Defense talking points
-A traditional ML benchmark measures held-out classifications; this project adds **incident-level work** for security analysts: source evidence, correlation restrictions, severity triage, validation and auditable messages. A detector score is not evidence of an actual compromise and IP-based correlation is a heuristic.
