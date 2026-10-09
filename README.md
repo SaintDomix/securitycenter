@@ -1,74 +1,86 @@
-# Multi-Agent Incident Investigation
+# CyberGuard-MAS
 
-Project analyzes incoming network-flow CSVs using a **previously trained, trusted** ML model and a five-agent investigation workflow. It displays a case queue, network attributes, attack category predictions, workflow traces, independent evidence checks, and exportable reports.
+**Multi-Agent Network Intrusion Detection and Incident Investigation — Assignment 2**
 
-**This is an educational offline security analysis tool, not a live SIEM or production IDS.**
+CyberGuard-MAS is an educational SOC-style prototype. A saved supervised model flags potentially malicious **network flows**, and five specialized programmatic agents hand off structured artifacts to form evidence-linked investigation candidates. The dashboard is for **investigating data**, not training on uploads.
 
-## Windows quick start
+> **Scope:** Offline analysis of CSV network-flow records; not a production IDS, SIEM, or confirmation of host compromise. **No LLM API is used** in this release; agents are bounded software workers with tools, structured messages, and SQLite audit traces.
 
-```powershell
+## Quick start (Windows / Linux / macOS)
+
+Requirements: Python 3.11+ and pip. From repository root:
+
+```bash
 python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-For the bundled **synthetic** demonstration, choose `demo_model.joblib` and upload `data/SYNTHETIC_new_flows.csv`. Synthetic demonstration results must never be described as real UNSW benchmark performance.
+For an **offline synthetic demonstration**: select `models/demo_model.joblib`, upload `data/SYNTHETIC_new_flows.csv`, and click **Analyze events**. This smoke test demonstrates coordination, **not** benchmark detection quality.
 
-## Train a real model with UNSW-NB15
+## Evaluate a model on real UNSW-NB15 data
 
-Download the *official* training and testing CSV files from https://research.unsw.edu.au/projects/unsw-nb15-dataset into `data/`:
+Download the official CSVs from [UNSW-NB15 (UNSW Canberra)](https://research.unsw.edu.au/projects/unsw-nb15-dataset), place in `data/`:
+
 - `UNSW_NB15_training-set.csv`
 - `UNSW_NB15_testing-set.csv`
 
-Run (default is multiclass; includes normal and different attack categories):
+Then train a **binary Normal vs Attack** model using the full official training split and evaluate it on the untouched official testing split:
 
-```powershell
-python tools/train_model.py --train data/UNSW_NB15_training-set.csv --test data/UNSW_NB15_testing-set.csv --out models/unsw_model.joblib --mode multiclass --model extra_trees --rows 25000
+```bash
+python tools/train_model.py --train data/UNSW_NB15_training-set.csv --test data/UNSW_NB15_testing-set.csv --out models/unsw_binary.joblib --mode binary --model extra_trees
 ```
 
-`models/unsw_model.joblib` and `models/unsw_model.metrics.json` will be created. The test split is **never fitted**. The holdout metrics are shown in **Model performance**. You can set `--rows 175341` to use the full official training split and all 82332 test rows (provided sufficient RAM). The CLI limit applies independently to the beginning of each file; for a stronger benchmark, use full splits and inspect class balance. Keep preprocessing and train/test provenance explicit.
+The command writes `models/unsw_binary.joblib` and `models/unsw_binary.metrics.json`. Run the dashboard, select that local model and upload `data/UNSW_NB15_testing-set.csv`. The classifier does not use the `label` or `attack_cat` columns as prediction features. **Metrics are from labeled held-out data**, not from the live investigation screen.
 
-Launch Streamlit and select `unsw_model.joblib`. Upload **the official UNSW testing CSV** for demonstration; its labels, if present, are excluded from prediction features. No IP/time correlation can be claimed from CSVs without those fields. Be careful: selecting the same held-out test set for repeated model design decisions can bias final evaluation; report development vs final evaluation separately if you tune models.
+Do not publish external raw datasets, local logs, secret files, or untrusted pickle/joblib models. Model bundles are loaded with joblib; use **only files you prepared or trust**.
 
-## Architecture
+## Workflow and roles
 
-Orchestrator → Telemetry Agent → Threat Detection Agent → Correlation Agent → Incident Assessment Agent → Verification Agent → audit store.
+```text
+Analyst CSV → Orchestrator → Telemetry Agent → Threat Detection Agent
+                                                ↓
+Verification Agent ← Incident Assessment Agent ← Correlation Agent
+         ↓
+      Report + Streamlit dashboard
+```
 
-- Telemetry: validates a new CSV.
-- Detection: applies saved supervised classifier; outputs category predictions and aggregate attack-class score.
-- Correlation: groups by source IP and time where available, otherwise only flags individual flows.
-- Assessment: gives review priorities, observed network attributes and global model importance context.
-- Verification: independently recomputes evidence-row membership, supported class labels and scores.
+| Agent | Input | Output | Tools | Completion |
+|---|---|---|---|---|
+| Telemetry | Input CSV | Validated rows / schema | CSV loader, column validator | Valid table or explicit exception |
+| Threat Detection | Rows, trusted model | Scores and predicted classes | Class prediction, probability prediction | All rows scored or rejected |
+| Correlation | Scored rows | Bounded incident candidates | Event grouping | Candidates emitted |
+| Incident Assessment | Candidates, flow attributes | Review priorities, feature context | Enrichment | All displayed candidates assessed |
+| Verification | Candidates, scored original rows | Per-case checks and acceptance summary | Evidence checker | Validation outcome recorded |
 
-Agents pass structured messages and write tools and state to SQLite (`runs/cyberguard.sqlite`). The workload view reports **actual** tool calls, without padding with fake operations. Each agent invokes at most two tools. No LLM API is required; these are **specialized programmatic agents**, not autonomous LLM agents. An LLM critic/analyst can be added later if your course requires adaptive LLM behavior.
-
-## Limitations
-
-- The model is not retrained by user uploads; do not mix bundles and datasets.
-- Global feature importance is not per-instance explanation or causal proof.
-- A high attack-class score is not necessarily calibrated probability.
-- Threat labels are predictions, not forensic confirmation.
-- Grouping an IP and time window does not establish a single attacker.
-- Up to 100 incident candidates are displayed; total count appears separately.
-- Only trusted `.joblib` artifacts should be loaded (pickle-based formats are unsafe from untrusted sources).
+The orchestrator only routes tasks. Each agent sends typed JSON-like envelopes containing `run_id`, `message_id`, `sender`, `receiver`, `timestamp`, and `payload`. SQLite saves actual tool calls, messages, and run outcomes in `runs/cyberguard.sqlite`. The dashboard **Agent Workflow** view exposes the traces and load distribution. See [Architecture](ARCHITECTURE.md).
 
 ## Tests
 
-```powershell
+```bash
 python -m unittest discover -s tests -v
 ```
 
+## Command-line investigation
 
-## Recommended final benchmark protocol
-
-The recommended SOC detector is binary (normal vs attack), with an unmodified official test split. Training on all rows is the default; class balancing is **off** by default because it can increase false alarms.
-
-```powershell
-python tools/train_model.py --train data/UNSW_NB15_training-set.csv --test data/UNSW_NB15_testing-set.csv --out models/unsw_binary.joblib --mode binary --model extra_trees
-python -m streamlit run app.py
+```bash
+python main.py --input data/SYNTHETIC_new_flows.csv --model models/demo_model.joblib --rows 500
 ```
 
-Multi-class prediction is an *optional experiment*, not a verified attack attribution. To compare model families, train separate artifacts by changing `--model extra_trees` to `random_forest` or `logistic_regression`, retaining the same official test data. `--balanced` is an optional experiment, not the default.
+The run JSON appears under `reports/` (ignored by Git). Model Performance shows the saved holdout metrics of a locally trained model. Synthetic model outputs must never be presented as real UNSW benchmark results.
 
-**Important:** The supplied `unsw_model.joblib` and its existing metrics are from the previous 25k balanced, multiclass experiment; use newly trained `unsw_binary.joblib` for the recommended final demonstration. The supplied demo model is synthetic. This archive does not include the official UNSW CSV files. Models are serialized using joblib and must never be loaded from untrusted sources.
+## Research article and presentation
 
-If a source CSV lacks IP addresses and timestamps, this system reports flagged flows, **not reconstructed attack sequences**. Feature importance is model-level context, not a local causal explanation. Evidence validation checks recorded values and consistency, not whether an attack truly happened.
+- [`docs/CyberGuard_MAS_Assignment2_Article.docx`](docs/CyberGuard_MAS_Assignment2_Article.docx)
+- [`docs/ASSIGNMENT2_SUBMISSION.md`](docs/ASSIGNMENT2_SUBMISSION.md)
+- [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md)
+
+## Limitations
+
+- A high detector score is not proof of an attack or a calibrated probability.
+- No verified local SHAP attribution; displayed feature importance is global.
+- Where IP/time metadata is unavailable, correlation produces individual-flow candidates, not attack timelines.
+- At most 100 candidates are shown; totals may be larger.
+- Agent-based workflow ≠ autonomous LLM multi-agent platform.
+- Dataset shift may degrade results beyond UNSW-NB15.
+
+The work is separate from the author's dissertation.
